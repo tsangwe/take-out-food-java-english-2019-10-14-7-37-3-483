@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.List;
 
 /*
@@ -13,8 +14,67 @@ public class App {
     }
 
     public String bestCharge(List<String> inputs) {
-        //TODO: write code here
+        boolean activePromotion1 = false;
+        boolean activePromotion2 = false;
+        int totalPrice = 0;
+        List<Order> orderList = new ArrayList<Order>();
 
-        return null;
+        StringBuilder sb = new StringBuilder("============= Order details =============\n");
+
+        for (String input: inputs) {
+            int quantity = Integer.parseInt(input.substring(input.length()-1));
+            for (Item item: itemRepository.findAll()) {
+                if (item.getId().equals(input.substring(0, 8))) {
+                    Order order = new Order(item, quantity);
+                    sb.append(order.toString());
+                    orderList.add(order);
+                    totalPrice += order.getTotalPrice();
+                    break;
+                }
+            }
+        }
+
+        sb.append("-----------------------------------\n");
+
+        List<SalesPromotion> salesPromotions = salesPromotionRepository.findAll();
+
+        // Check promotion 1
+        String promotion1Statement = salesPromotions.get(0).getDisplayName();
+        int promotion1Discounted = 0;
+        if (totalPrice >= 30) {
+            promotion1Discounted += 6;
+        }
+        
+        // Check promotion 2
+        String promotion2Statement = salesPromotions.get(1).getDisplayName() + " (";
+        int promotion2Discounted = 0;
+        for (Order order: orderList) {
+            SalesPromotion promotion2 = salesPromotions.get(1);
+            for (String promoteItemId: promotion2.getRelatedItems()) {
+                if (order.getItem().getId().equals(promoteItemId)) {
+                    promotion2Statement += order.getItem().getName() + "，";
+                    promotion2Discounted += order.getTotalPrice() / 2;
+                    break;
+                }
+            }
+        }
+        promotion2Statement = promotion2Statement.substring(0, promotion2Statement.length()-1) + ")，saving " + promotion2Discounted + " yuan\n";
+        
+        if (promotion2Discounted > promotion1Discounted) {
+            sb.append("Promotion used:\n");
+            sb.append(promotion2Statement);
+            sb.append("-----------------------------------\n");
+            totalPrice -= promotion2Discounted;
+        } else if (promotion1Discounted > 0) {
+            sb.append("Promotion used:\n");
+            sb.append("满30减6 yuan，saving 6 yuan\n");
+            sb.append("-----------------------------------\n");
+            totalPrice -= promotion1Discounted;
+        }
+
+        sb.append("Total：" + totalPrice + " yuan\n");
+        sb.append("===================================");
+        System.out.println(sb);
+        return sb.toString();
     }
 }
